@@ -3,7 +3,7 @@ package cartman
 import (
 	"crypto/sha1"
 	"crypto/x509"
-	"encoding/pem"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path"
@@ -13,10 +13,10 @@ var Debug bool
 
 type client struct {
 	Name string
-	Cert *x509.Certificate
+	Fingerprint string
 }
 
-type Store struct {
+type FileStore struct {
 	root string
 	certs map[string]client
 }
@@ -27,8 +27,8 @@ func debug(msg ...interface{}) {
 	}
 }
 
-func NewStore(root string) (Store, error) {
-	s := Store{root: root, certs: map[string]client{}}
+func NewFileStore(root string) (FileStore, error) {
+	s := FileStore{root: root, certs: map[string]client{}}
 	dir, err := os.Open(root)
 	if err != nil {
 		return s, err
@@ -42,28 +42,21 @@ func NewStore(root string) (Store, error) {
 		debug("found client", name)
 
 		// load certs
-		der, err := os.ReadFile(path.Join(root, name, "cert.pem"))
+		content, err := os.ReadFile(path.Join(root, name))
 		if err != nil {
 			return s, err
 		}
-		block, _ := pem.Decode(der)
-		if err != nil {
-			return s, err
-		}
+		fp := string(content)
 
-		u := client{Name: name}
-		u.Cert, err = x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return s, err
-		}
-		s.certs[fingerprint(u.Cert)] = u
+		s.certs[fp] = client{Name: name, Fingerprint: fp}
+		debug("loaded", name, "with fingerprint", fp)
 	}
-	debug("loaded", len(s.certs), "certificates")
+	debug("loaded", len(s.certs), "clients")
 	
 	return s, nil
 }
 
-func (s Store) GetClientFromCert(cert *x509.Certificate) (string, error) {
+func (s FileStore) GetClientFromCert(cert *x509.Certificate) (string, error) {
 	client, ok := s.certs[fingerprint(cert)]
 	if !ok {
 		return "", fmt.Errorf("client not found for certificate")
@@ -71,26 +64,26 @@ func (s Store) GetClientFromCert(cert *x509.Certificate) (string, error) {
 	return client.Name, nil
 }
 
-func (s Store) AddClient(name string, cert *x509.Certificate) error {
+func (s FileStore) AddClient(name string, cert *x509.Certificate) error {
 	debug("adding certificate for", name)
 
-	f, err := os.Create(path.Join(s.root, name, "cert.pem"))
+	f, err := os.Create(path.Join(s.root, name))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	block := pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}
-	if err := pem.Encode(f, &block); err != nil {
+	fp := fingerprint(cert)
+	if _, err := f.WriteString(fp); err != nil {
 		return err
 	}
 
-	s.certs[fingerprint(cert)] = client{Name: name, Cert: cert}
+	s.certs[fingerprint(cert)] = client{Name: name, Fingerprint: fp}
 	return nil
 }
 
 func fingerprint(cert *x509.Certificate) string {
 	fp := sha1.Sum(cert.Raw)
-	return string(fp[:])
+	return hex.EncodeToString(fp[:])
 }
 

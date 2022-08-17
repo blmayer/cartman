@@ -21,7 +21,7 @@ func TestMain(t *testing.T) {
 
 	// cartman part
 	Debug = true
-	cartman, err := NewStore("users")
+	cartman, err := NewFileStore("users")
 	if err != nil {
 		t.Error(err)
 	}
@@ -52,6 +52,7 @@ func TestMain(t *testing.T) {
 		}
 		connInfo := conn.ConnectionState()
 		fmt.Printf("got request from %+v\n", connInfo)
+		println("fingerprint:", fingerprint(connInfo.PeerCertificates[0]))
 
 		userName, err := cartman.GetClientFromCert(connInfo.PeerCertificates[0])
 		if err != nil {

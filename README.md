@@ -48,5 +48,11 @@ But you can use curl likewise:
 curl -vv https://localhost:8080 -E users/test/cert.pem --key users/test/cert.key --cacert fullchain.pem
 ```
 
+Creating certificate files can be done using openssl:
+
+```
+openssl req -x509 -newkey rsa:4096 -keyout users/test/cert.key -out users/test/cert.pem -days 36500 -nodes
+```
+
 To see an example of a server check the [cartman_test.go](cartman_test.go) file.
 

@@ -10,7 +10,7 @@ Import this library, then create a Store:
 
 `cartman, err := NewStore("users")`
 
-this will scan the *users* directory for folder containing certificates.
+this will scan the *users* directory for folders containing certificates.
 The accepted structure is as follows:
 
 ```
@@ -23,7 +23,9 @@ users/
 
 The certificate file must be a x509 certificate encoded em *pem* format.
 
-If no error occurs you can check if the sent certificate is known:
+If no error occurs the certificates for *test* and *me* will be identified
+if sent by them. You can check if the sent certificate is known using the
+*tls* package:
 
 ```
 connInfo := conn.ConnectionState()
